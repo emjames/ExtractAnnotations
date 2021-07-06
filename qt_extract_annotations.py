@@ -10,18 +10,18 @@ import urllib
 import os
 import math
 
+supported_colors = [
+        {'name': 'Red',     'value': [255, 0, 0]},
+        {'name': 'Green',   'value': [0, 255, 0]},
+        {'name': 'Blue',    'value': [0, 0, 255]},
+        {'name': 'Yellow',  'value': [255, 255, 0]},
+        {'name': 'Cyan',    'value': [0, 255, 255]}]
+
 def get_named_color(color_rgb):
     """
     Convert RGB to a named color by calculating the distance between the
         annotation's RGB and the supported colors
     """
-    supported_colors = [
-            {'name': 'Red',     'value': [255, 0, 0]},
-            {'name': 'Green',   'value': [0, 255, 0]},
-            {'name': 'Blue',    'value': [0, 0, 255]},
-            {'name': 'Yellow',  'value': [255, 255, 0]},
-            {'name': 'Cyan',    'value': [0, 255, 255]}]
-
     least_distant_color = None
     least_distance = 999
 
@@ -46,6 +46,12 @@ def main():
     document = popplerqt5.Poppler.Document.load(input_filename)
 
     n_pages = document.numPages()
+    # A list of annotations that have the color as key and the annotation
+    # information as value
+    annotations_by_color = {}
+    for c in supported_colors:
+        annotations_by_color[c['name']] = []
+
     
     for i in range(n_pages):
         page = document.page(i)
@@ -57,7 +63,6 @@ def main():
 
                 # [:3] since we only want the RGB bit
                 named_color = get_named_color(color[:3])
-                print(f"named color: {named_color}")
 
                 if isinstance(annotation, popplerqt5.Poppler.Annotation):
                     if isinstance(annotation, popplerqt5.Poppler.HighlightAnnotation):
@@ -73,20 +78,27 @@ def main():
                             body.setCoords(*rect)
                             txt = txt + str(page.text(body)) + ' '
 
-
-                        print(str(txt))
-                        print(f'Page: {i+1}')
-                        print('======')
+                        annotations_by_color[named_color['name']].append({
+                                'page': i+1,
+                                'content': str(txt),
+                                'type': 'HighlightAnnotation'
+                                })
                     elif isinstance(annotation, popplerqt5.Poppler.TextAnnotation):
                         print('TEXTBOX ANNOTATIONS')
                         print('!!!!!!')
                         print(annotation.contents())
+                        color = annotation.style().color().getRgb()
+                        named_color = get_named_color(color[:3])
 
-                        print(f'Page: {i}')
-                        print('======')
+                        annotations_by_color[named_color['name']].append({
+                                'page': i+1,
+                                'content': str(annotation.contents()),
+                                'type': 'TextAnnotation'
+                                })
                     else:
                         print('Not HighlightAnnotation but something else')
                         print('******')
+    print(annotations_by_color['Yellow'])
         # else:
         #     print('No annotations found')
 
