@@ -9,6 +9,8 @@ import sys
 import urllib
 import os
 import math
+import mdutils
+import json
 
 supported_colors = [
         {'name': 'Red',     'value': [255, 0, 0]},
@@ -16,6 +18,15 @@ supported_colors = [
         {'name': 'Blue',    'value': [0, 0, 255]},
         {'name': 'Yellow',  'value': [255, 255, 0]},
         {'name': 'Cyan',    'value': [0, 255, 255]}]
+
+def get_config(config):
+    f = open('./config.json')
+    data = json.load(f)
+    value = data[config]
+    f.close()
+
+    return value
+
 
 def get_named_color(color_rgb):
     """
@@ -81,24 +92,39 @@ def main():
                         annotations_by_color[named_color['name']].append({
                                 'page': i+1,
                                 'content': str(txt),
-                                'type': 'HighlightAnnotation'
+                                'type': 'Highlight'
                                 })
                     elif isinstance(annotation, popplerqt5.Poppler.TextAnnotation):
-                        print('TEXTBOX ANNOTATIONS')
-                        print('!!!!!!')
-                        print(annotation.contents())
                         color = annotation.style().color().getRgb()
                         named_color = get_named_color(color[:3])
 
                         annotations_by_color[named_color['name']].append({
                                 'page': i+1,
                                 'content': str(annotation.contents()),
-                                'type': 'TextAnnotation'
+                                'type': 'Text'
                                 })
                     else:
                         print('Not HighlightAnnotation but something else')
                         print('******')
-    print(annotations_by_color['Yellow'])
+    base_dir = get_config('MainFolder')
+    print(base_dir)
+
+    for color in annotations_by_color:
+        if (len(annotations_by_color[color])) > 0:
+            # make a markdown with all of the notes of the same color
+            md_file = mdutils.MdUtils(file_name=f"{base_dir}{color}-notes.md", title=f"{color}-notes")
+            annotations = annotations_by_color[color]
+
+            md_file.new_header(level=1, title=f"{color} notes", style='atx')
+
+            for annotation in annotations:
+                # print(annotation['page'])
+                md_file.new_header(level=2,
+                        title=f"Page {annotation['page']}: {annotation['type']}",
+                        style='atx')
+                md_file.new_line(annotation['content'])
+                md_file.new_line(' ')
+        md_file.create_md_file()
         # else:
         #     print('No annotations found')
 
